@@ -45,6 +45,28 @@ function initializeServiceWorker() {
   // We first must register our ServiceWorker here before any of the code in
   // sw.js is executed.
   // B1. TODO - Check if 'serviceWorker' is supported in the current browser
+  window.addEventListener('load', (e) => {
+    const registerServiceWorker = async () => {
+      if ("serviceWorker" in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.register("./sw.js", {
+            scope: "./",
+          });
+          if (registration.installing) {
+            console.log("installing");
+          } else if (registration.waiting) {
+            console.log("installed");
+          } else if (registration.active) {
+            console.log("active");
+          }
+        } catch (error) {
+          console.error(`${error}`);
+        }
+      }
+    };
+    registerServiceWorker();
+  });
+  }
   // B2. TODO - Listen for the 'load' event on the window object.
   // Steps B3-B6 will be *inside* the event listener's function created in B2
   // B3. TODO - Register './sw.js' as a service worker (The MDN article
@@ -54,7 +76,7 @@ function initializeServiceWorker() {
   // B5. TODO - In the event that the service worker registration fails, console
   //            log that it has failed.
   // STEPS B6 ONWARDS WILL BE IN /sw.js
-}
+
 
 /**
  * Reads 'recipes' from localStorage and returns an array of
@@ -68,15 +90,47 @@ async function getRecipes() {
   // EXPOSE - START (All expose numbers start with A)
   // A1. TODO - Check local storage to see if there are any recipes.
   //            If there are recipes, return them.
+  const recipesFromStore = window.localStorage.getItem('recipes');
+
+  if (recipesFromStore){
+    return JSON.parse(recipesFromStore);
+  }
+
   /**************************/
   // The rest of this method will be concerned with requesting the recipes
   // from the network
   // A2. TODO - Create an empty array to hold the recipes that you will fetch
+  var holdRecipes = [];
   // A3. TODO - Return a new Promise. If you are unfamiliar with promises, MDN
   //            has a great article on them. A promise takes one parameter - A
   //            function (we call these callback functions). That function will
   //            take two parameters - resolve, and reject. These are functions
   //            you can call to either resolve the Promise or Reject it.
+
+  return new Promise((resolve, reject) => {
+    for (var i = 0; i < RECIPE_URLS.length; i++){
+      
+      
+      try{
+        fetch(RECIPE_URLS[i])
+        .then(result => result.json())
+        .then(data => {
+
+          holdRecipes.push(data);
+          if (holdRecipes.length == RECIPE_URLS.length){
+          
+            saveRecipesToStorage(holdRecipes);
+            resolve(JSON.parse(window.localStorage.getItem('recipes')));
+          }
+        })
+      } 
+      catch (err){
+        console.err(err);
+        reject(err);
+      }
+    }
+
+  })
   /**************************/
   // A4-A11 will all be *inside* the callback function we passed to the Promise
   // we're returning
